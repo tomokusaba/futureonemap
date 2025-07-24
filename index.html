@@ -87,11 +87,64 @@
             object-fit: cover;
             border-radius: 10px;
             border: 3px solid #ecf0f1;
-            transition: transform 0.3s ease;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+            background: linear-gradient(45deg, #f0f0f0 25%, transparent 25%, transparent 75%, #f0f0f0 75%, #f0f0f0),
+                        linear-gradient(45deg, #f0f0f0 25%, transparent 25%, transparent 75%, #f0f0f0 75%, #f0f0f0);
+            background-size: 20px 20px;
+            background-position: 0 0, 10px 10px;
         }
 
         .step-image:hover {
             transform: scale(1.05);
+        }
+
+        .step-image.loading {
+            opacity: 0.6;
+        }
+
+        .step-image.loaded {
+            opacity: 1;
+        }
+
+        .image-placeholder {
+            width: 200px;
+            height: 150px;
+            border-radius: 10px;
+            border: 3px solid #ecf0f1;
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #6c757d;
+            font-size: 0.9em;
+            text-align: center;
+            position: relative;
+        }
+
+        .loading-spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .image-info {
+            position: absolute;
+            bottom: 5px;
+            right: 5px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.7em;
         }
 
         .step-content {
@@ -412,6 +465,107 @@
         ];
 
         let currentStep = 0;
+        let imageCache = new Map();
+        let loadedImages = new Set();
+
+        // Image lazy loading and caching system
+        function createImageElement(src, alt, onClick) {
+            const container = document.createElement('div');
+            container.style.position = 'relative';
+            container.style.display = 'inline-block';
+
+            // Create placeholder
+            const placeholder = document.createElement('div');
+            placeholder.className = 'image-placeholder';
+            placeholder.innerHTML = `
+                <div>
+                    <div class="loading-spinner"></div>
+                    画像読み込み中...
+                </div>
+            `;
+
+            // Create actual image (hidden initially)
+            const img = document.createElement('img');
+            img.className = 'step-image loading';
+            img.alt = alt;
+            img.style.display = 'none';
+            img.onclick = onClick;
+
+            // Add image info overlay
+            const imageInfo = document.createElement('div');
+            imageInfo.className = 'image-info';
+            imageInfo.textContent = 'タップで拡大';
+
+            container.appendChild(placeholder);
+            container.appendChild(img);
+            container.appendChild(imageInfo);
+
+            // Load image with caching
+            loadImageWithCache(src).then(imageUrl => {
+                img.src = imageUrl;
+                img.onload = () => {
+                    img.style.display = 'block';
+                    img.classList.remove('loading');
+                    img.classList.add('loaded');
+                    placeholder.style.display = 'none';
+                    loadedImages.add(src);
+                };
+            }).catch(error => {
+                console.error('Failed to load image:', src, error);
+                placeholder.innerHTML = `
+                    <div style="color: #e74c3c;">
+                        <div>⚠️</div>
+                        画像の読み込みに失敗しました
+                    </div>
+                `;
+            });
+
+            return container;
+        }
+
+        // Image caching system
+        function loadImageWithCache(src) {
+            return new Promise((resolve, reject) => {
+                // Check if image is already cached
+                if (imageCache.has(src)) {
+                    resolve(imageCache.get(src));
+                    return;
+                }
+
+                // Create new image object for loading
+                const img = new Image();
+                img.onload = () => {
+                    // Create object URL for caching
+                    fetch(src)
+                        .then(response => response.blob())
+                        .then(blob => {
+                            const objectUrl = URL.createObjectURL(blob);
+                            imageCache.set(src, objectUrl);
+                            resolve(objectUrl);
+                        })
+                        .catch(() => {
+                            // Fallback to original src if blob creation fails
+                            imageCache.set(src, src);
+                            resolve(src);
+                        });
+                };
+                img.onerror = reject;
+                img.src = src;
+            });
+        }
+
+        // Preload next images
+        function preloadAdjacentImages() {
+            const preloadRange = 2; // Preload 2 images ahead and behind
+            const startIndex = Math.max(0, currentStep - preloadRange);
+            const endIndex = Math.min(routeSteps.length - 1, currentStep + preloadRange);
+
+            for (let i = startIndex; i <= endIndex; i++) {
+                if (!loadedImages.has(routeSteps[i].image)) {
+                    loadImageWithCache(routeSteps[i].image);
+                }
+            }
+        }
 
         function initializeNavigation() {
             const container = document.getElementById('navigationContainer');
@@ -422,19 +576,36 @@
                 stepElement.className = 'step-container';
                 stepElement.id = `step-${index}`;
                 
-                stepElement.innerHTML = `
-                    <div class="step-number">${index + 1}</div>
-                    <img class="step-image" src="${step.image}" alt="${step.title}" onclick="openModal('${step.image}')">
-                    <div class="step-content">
-                        <h3 class="step-title">${step.title}</h3>
-                        <p class="step-description">${step.description}</p>
-                    </div>
+                // Create step content
+                const stepNumber = document.createElement('div');
+                stepNumber.className = 'step-number';
+                stepNumber.textContent = index + 1;
+
+                // Create image with lazy loading
+                const imageContainer = createImageElement(
+                    step.image, 
+                    step.title, 
+                    () => openModal(step.image)
+                );
+
+                const stepContent = document.createElement('div');
+                stepContent.className = 'step-content';
+                stepContent.innerHTML = `
+                    <h3 class="step-title">${step.title}</h3>
+                    <p class="step-description">${step.description}</p>
                 `;
+
+                stepElement.appendChild(stepNumber);
+                stepElement.appendChild(imageContainer);
+                stepElement.appendChild(stepContent);
                 
                 container.appendChild(stepElement);
             });
 
             updateStepDisplay();
+            
+            // Start preloading adjacent images
+            preloadAdjacentImages();
         }
 
         function updateStepDisplay() {
@@ -473,6 +644,9 @@
             if (currentStepElement) {
                 currentStepElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
+
+            // Preload adjacent images when step changes
+            preloadAdjacentImages();
         }
 
         function nextStep() {
@@ -493,13 +667,31 @@
             const modal = document.getElementById('imageModal');
             const modalImage = document.getElementById('modalImage');
             
-            modalImage.src = imageSrc;
+            // Use cached version if available
+            const cachedSrc = imageCache.get(imageSrc) || imageSrc;
+            modalImage.src = cachedSrc;
             modal.style.display = 'block';
         }
 
         function closeModal() {
             const modal = document.getElementById('imageModal');
             modal.style.display = 'none';
+        }
+
+        // Cleanup function for memory management
+        function cleanupImageCache() {
+            // Keep only recently used images in cache
+            const maxCacheSize = 10;
+            if (imageCache.size > maxCacheSize) {
+                const entries = Array.from(imageCache.entries());
+                const oldEntries = entries.slice(0, entries.length - maxCacheSize);
+                oldEntries.forEach(([key, value]) => {
+                    if (value.startsWith('blob:')) {
+                        URL.revokeObjectURL(value);
+                    }
+                    imageCache.delete(key);
+                });
+            }
         }
 
         // Keyboard navigation
@@ -517,6 +709,18 @@
 
         // Initialize the navigation system when page loads
         window.onload = initializeNavigation;
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            imageCache.forEach((value, key) => {
+                if (value.startsWith('blob:')) {
+                    URL.revokeObjectURL(value);
+                }
+            });
+        });
+
+        // Periodic cleanup
+        setInterval(cleanupImageCache, 60000); // Cleanup every minute
     </script>
 </body>
 </html>
