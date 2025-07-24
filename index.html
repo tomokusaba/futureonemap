@@ -425,40 +425,47 @@
     </div>
 
     <script>
-        // Route data - customize these descriptions based on your actual images
+        // Route data - with thumbnail and full image paths for optimization
         const routeSteps = [
             {
                 image: "img/250717132230341.JPG",
+                thumbnail: "img/thumbnails/250717132230341.JPG",
                 title: "出発地点",
                 description: "こちらが出発地点です。大崎駅南改札口からスタートします。ここから道順を進めていきましょう。"
             },
             {
-                image: "img/250717132246343.JPG", 
+                image: "img/250717132246343.JPG",
+                thumbnail: "img/thumbnails/250717132246343.JPG",
                 title: "第1チェックポイント",
                 description: "最初の曲がり角です。新西口方面に進んでください。この地点を過ぎると、次のポイントへ向かいます。"
             },
             {
                 image: "img/250717132321016.JPG",
+                thumbnail: "img/thumbnails/250717132321016.JPG",
                 title: "第2チェックポイント", 
                 description: "正面にThinkPark Towerが見えます。 このビルの前を左に曲がります。"
             },
             {
                 image: "img/250717132440700.JPG",
+                thumbnail: "img/thumbnails/250717132440700.JPG",
                 title: "中間地点",
                 description: "正面にSonyビルが見えます。このビルの手前を右に曲がります。"
             },
             {
                 image: "img/250717132457273.JPG",
+                thumbnail: "img/thumbnails/250717132457273.JPG",
                 title: "第3チェックポイント",
                 description: "もうすぐ目的地が近づいています。この景色が見えたら正しいルートを進んでいます。角を左に曲がってください"
             },
             {
                 image: "img/250717132546917.JPG",
+                thumbnail: "img/thumbnails/250717132546917.JPG",
                 title: "最終チェックポイント",
                 description: "最後のチェックポイントです。目的地はもう間近です。右に曲がってください"
             },
             {
                 image: "img/250717132621391.JPG",
+                thumbnail: "img/thumbnails/250717132621391.JPG",
                 title: "目的地到着",
                 description: "お疲れ様でした！目的地に到着しました。この景色で到着を確認してください。"
             }
@@ -468,8 +475,8 @@
         let imageCache = new Map();
         let loadedImages = new Set();
 
-        // Image lazy loading and caching system
-        function createImageElement(src, alt, onClick) {
+        // Image lazy loading and caching system with thumbnail support
+        function createImageElement(thumbnailSrc, fullSrc, alt, onClick) {
             const container = document.createElement('div');
             container.style.position = 'relative';
             container.style.display = 'inline-block';
@@ -484,7 +491,7 @@
                 </div>
             `;
 
-            // Create actual image (hidden initially)
+            // Create actual image (hidden initially) - using thumbnail for display
             const img = document.createElement('img');
             img.className = 'step-image loading';
             img.alt = alt;
@@ -500,18 +507,18 @@
             container.appendChild(img);
             container.appendChild(imageInfo);
 
-            // Load image with caching
-            loadImageWithCache(src).then(imageUrl => {
+            // Load thumbnail with caching (much faster due to smaller size)
+            loadImageWithCache(thumbnailSrc).then(imageUrl => {
                 img.src = imageUrl;
                 img.onload = () => {
                     img.style.display = 'block';
                     img.classList.remove('loading');
                     img.classList.add('loaded');
                     placeholder.style.display = 'none';
-                    loadedImages.add(src);
+                    loadedImages.add(thumbnailSrc);
                 };
             }).catch(error => {
-                console.error('Failed to load image:', src, error);
+                console.error('Failed to load thumbnail:', thumbnailSrc, error);
                 placeholder.innerHTML = `
                     <div style="color: #e74c3c;">
                         <div>⚠️</div>
@@ -554,13 +561,18 @@
             });
         }
 
-        // Preload next images
+        // Preload next thumbnail images
         function preloadAdjacentImages() {
             const preloadRange = 2; // Preload 2 images ahead and behind
             const startIndex = Math.max(0, currentStep - preloadRange);
             const endIndex = Math.min(routeSteps.length - 1, currentStep + preloadRange);
 
             for (let i = startIndex; i <= endIndex; i++) {
+                // Preload thumbnails first (fast due to small size)
+                if (!loadedImages.has(routeSteps[i].thumbnail)) {
+                    loadImageWithCache(routeSteps[i].thumbnail);
+                }
+                // Also preload full images for modal (slower but improves modal experience)
                 if (!loadedImages.has(routeSteps[i].image)) {
                     loadImageWithCache(routeSteps[i].image);
                 }
@@ -581,11 +593,12 @@
                 stepNumber.className = 'step-number';
                 stepNumber.textContent = index + 1;
 
-                // Create image with lazy loading
+                // Create image with lazy loading - using thumbnail for display, full image for modal
                 const imageContainer = createImageElement(
-                    step.image, 
+                    step.thumbnail,  // Use thumbnail for display (fast loading)
+                    step.image,      // Keep reference to full image for modal
                     step.title, 
-                    () => openModal(step.image)
+                    () => openModal(step.image)  // Modal uses full image
                 );
 
                 const stepContent = document.createElement('div');
@@ -667,10 +680,16 @@
             const modal = document.getElementById('imageModal');
             const modalImage = document.getElementById('modalImage');
             
-            // Use cached version if available
-            const cachedSrc = imageCache.get(imageSrc) || imageSrc;
-            modalImage.src = cachedSrc;
-            modal.style.display = 'block';
+            // Always use full-size image for modal, load if not cached
+            loadImageWithCache(imageSrc).then(cachedSrc => {
+                modalImage.src = cachedSrc;
+                modal.style.display = 'block';
+            }).catch(error => {
+                console.error('Failed to load full-size image for modal:', imageSrc, error);
+                // Fallback: try to use the original src
+                modalImage.src = imageSrc;
+                modal.style.display = 'block';
+            });
         }
 
         function closeModal() {
