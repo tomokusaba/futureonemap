@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>未来の地図 - 道順案内システム</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        h1 {
+            color: #2c3e50;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .subtitle {
+            color: #7f8c8d;
+            font-size: 1.2em;
+            margin-bottom: 30px;
+        }
+
+        .navigation-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .step-container {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding: 20px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .step-container:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .step-number {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        .step-image {
+            width: 200px;
+            height: 150px;
+            object-fit: cover;
+            border-radius: 10px;
+            border: 3px solid #ecf0f1;
+            transition: transform 0.3s ease;
+        }
+
+        .step-image:hover {
+            transform: scale(1.05);
+        }
+
+        .step-content {
+            flex: 1;
+        }
+
+        .step-title {
+            color: #2c3e50;
+            font-size: 1.4em;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .step-description {
+            color: #5d6d7e;
+            line-height: 1.6;
+            font-size: 1.1em;
+        }
+
+        .progress-bar {
+            background: #ecf0f1;
+            height: 8px;
+            border-radius: 4px;
+            margin: 30px 0;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            background: linear-gradient(90deg, #3498db, #2ecc71);
+            height: 100%;
+            width: 0%;
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 25px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(149, 165, 166, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .current-step {
+            border: 3px solid #3498db;
+            background: linear-gradient(135deg, #ebf3fd, #d6eaff);
+        }
+
+        .completed-step {
+            opacity: 0.7;
+            background: linear-gradient(135deg, #d5f4e6, #c8e6c9);
+        }
+
+        .info-panel {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            padding: 20px;
+            border-radius: 15px;
+            margin-top: 30px;
+            border-left: 5px solid #3498db;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+        }
+
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            max-width: 90%;
+            max-height: 90%;
+        }
+
+        .modal-image {
+            width: 100%;
+            height: auto;
+            border-radius: 10px;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 15px;
+            right: 25px;
+            color: white;
+            font-size: 35px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+            .step-container {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .step-image {
+                width: 100%;
+                max-width: 300px;
+            }
+
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .btn {
+                width: 200px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🗺️ 未来の地図</h1>
+            <p class="subtitle">画像で案内する道順ナビゲーションシステム</p>
+        </div>
+
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+
+        <div class="controls">
+            <button class="btn btn-secondary" id="prevBtn" onclick="previousStep()">⬅️ 前のステップ</button>
+            <button class="btn btn-primary" id="nextBtn" onclick="nextStep()">次のステップ ➡️</button>
+        </div>
+
+        <div class="navigation-container" id="navigationContainer">
+            <!-- Steps will be dynamically generated here -->
+        </div>
+
+        <div class="info-panel">
+            <h3>🔍 使い方</h3>
+            <p>・各ステップの画像をクリックすると拡大表示されます</p>
+            <p>・「次のステップ」「前のステップ」ボタンで進行状況を管理できます</p>
+            <p>・現在のステップは青い枠で強調表示されます</p>
+        </div>
+    </div>
+
+    <!-- Modal for image zoom -->
+    <div id="imageModal" class="modal" onclick="closeModal()">
+        <span class="close-modal" onclick="closeModal()">&times;</span>
+        <div class="modal-content">
+            <img id="modalImage" class="modal-image" src="" alt="拡大画像">
+        </div>
+    </div>
+
+    <script>
+        // Route data - customize these descriptions based on your actual images
+        const routeSteps = [
+            {
+                image: "250717132230341.JPG",
+                title: "出発地点",
+                description: "こちらが出発地点です。目印となる建物や看板を確認してスタートしましょう。"
+            },
+            {
+                image: "250717132246343.JPG", 
+                title: "第1チェックポイント",
+                description: "最初の曲がり角です。この建物を目印に進行方向を確認してください。"
+            },
+            {
+                image: "250717132321016.JPG",
+                title: "第2チェックポイント", 
+                description: "2番目の重要なポイントです。周囲の景色と照らし合わせて現在地を確認しましょう。"
+            },
+            {
+                image: "250717132440700.JPG",
+                title: "中間地点",
+                description: "ルートの中間地点に到達しました。ここまでの道のりを振り返り、残りの道程を確認してください。"
+            },
+            {
+                image: "250717132457273.JPG",
+                title: "第3チェックポイント",
+                description: "もうすぐ目的地が近づいています。この景色が見えたら正しいルートを進んでいます。"
+            },
+            {
+                image: "250717132546917.JPG",
+                title: "最終チェックポイント",
+                description: "最後のチェックポイントです。目的地はもう間近です。"
+            },
+            {
+                image: "250717132621391.JPG",
+                title: "目的地到着",
+                description: "お疲れ様でした！目的地に到着しました。この景色で到着を確認してください。"
+            }
+        ];
+
+        let currentStep = 0;
+
+        function initializeNavigation() {
+            const container = document.getElementById('navigationContainer');
+            container.innerHTML = '';
+
+            routeSteps.forEach((step, index) => {
+                const stepElement = document.createElement('div');
+                stepElement.className = 'step-container';
+                stepElement.id = `step-${index}`;
+                
+                stepElement.innerHTML = `
+                    <div class="step-number">${index + 1}</div>
+                    <img class="step-image" src="${step.image}" alt="${step.title}" onclick="openModal('${step.image}')">
+                    <div class="step-content">
+                        <h3 class="step-title">${step.title}</h3>
+                        <p class="step-description">${step.description}</p>
+                    </div>
+                `;
+                
+                container.appendChild(stepElement);
+            });
+
+            updateStepDisplay();
+        }
+
+        function updateStepDisplay() {
+            const steps = document.querySelectorAll('.step-container');
+            
+            steps.forEach((step, index) => {
+                step.classList.remove('current-step', 'completed-step');
+                
+                if (index < currentStep) {
+                    step.classList.add('completed-step');
+                } else if (index === currentStep) {
+                    step.classList.add('current-step');
+                }
+            });
+
+            // Update progress bar
+            const progress = ((currentStep + 1) / routeSteps.length) * 100;
+            document.getElementById('progressFill').style.width = `${progress}%`;
+
+            // Update button states
+            document.getElementById('prevBtn').disabled = currentStep === 0;
+            document.getElementById('nextBtn').disabled = currentStep === routeSteps.length - 1;
+
+            // Scroll to current step
+            const currentStepElement = document.getElementById(`step-${currentStep}`);
+            if (currentStepElement) {
+                currentStepElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
+        function nextStep() {
+            if (currentStep < routeSteps.length - 1) {
+                currentStep++;
+                updateStepDisplay();
+            }
+        }
+
+        function previousStep() {
+            if (currentStep > 0) {
+                currentStep--;
+                updateStepDisplay();
+            }
+        }
+
+        function openModal(imageSrc) {
+            const modal = document.getElementById('imageModal');
+            const modalImage = document.getElementById('modalImage');
+            
+            modalImage.src = imageSrc;
+            modal.style.display = 'block';
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('imageModal');
+            modal.style.display = 'none';
+        }
+
+        // Keyboard navigation
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'ArrowRight' || event.key === ' ') {
+                event.preventDefault();
+                nextStep();
+            } else if (event.key === 'ArrowLeft') {
+                event.preventDefault();
+                previousStep();
+            } else if (event.key === 'Escape') {
+                closeModal();
+            }
+        });
+
+        // Initialize the navigation system when page loads
+        window.onload = initializeNavigation;
+    </script>
+</body>
+</html>
