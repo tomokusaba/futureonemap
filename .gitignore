@@ -1,0 +1,17 @@
+# Privacy: Exclude original non-privacy-protected images
+# Only privacy-protected versions should be in the repository
+img/*.JPG
+
+# Temporary files and build artifacts
+/tmp/
+*.tmp
+*.log
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

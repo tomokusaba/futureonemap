@@ -2,6 +2,7 @@
 
 # Thumbnail generation script for FutureOne navigation images
 # Creates optimized thumbnails to reduce loading time
+# Includes privacy protection features to prevent individual identification
 
 echo "🖼️  Generating thumbnails for FutureOne navigation images..."
 
@@ -29,9 +30,10 @@ for image in "$SOURCE_DIR"/*.JPG; do
         count=$((count + 1))
         echo "[$count/$total] Processing: $filename"
         
-        # Generate thumbnail with ImageMagick
+        # Generate thumbnail with ImageMagick and privacy protection
         # Using -auto-orient to fix EXIF rotation issues FIRST
         # -resize to maintain aspect ratio and crop to exact dimensions
+        # -blur 0x1.5 to apply gentle blur for privacy protection (makes faces unrecognizable)
         # -quality 85 for good compression while maintaining quality
         # -strip to remove metadata and reduce file size
         convert "$image" \
@@ -39,6 +41,7 @@ for image in "$SOURCE_DIR"/*.JPG; do
             -resize "${THUMB_WIDTH}x${THUMB_HEIGHT}^" \
             -gravity center \
             -crop "${THUMB_WIDTH}x${THUMB_HEIGHT}+0+0" \
+            -blur 0x1.5 \
             -quality 85 \
             -strip \
             "$thumb_path"
@@ -57,6 +60,38 @@ done
 
 echo "✅ Thumbnail generation complete!"
 echo "📁 Thumbnails saved in: $THUMB_DIR"
+
+# Privacy protection for full-size images
+echo ""
+echo "🔒 Applying privacy protection to full-size images..."
+
+# Create privacy-protected versions directory
+PRIVACY_DIR="img/privacy_protected"
+mkdir -p "$PRIVACY_DIR"
+
+count=0
+for image in "$SOURCE_DIR"/*.JPG; do
+    if [ -f "$image" ]; then
+        filename=$(basename "$image")
+        privacy_path="$PRIVACY_DIR/$filename"
+        
+        count=$((count + 1))
+        echo "[$count/$total] Privacy protecting: $filename"
+        
+        # Apply light blur to full-size images for privacy protection
+        # Using lighter blur (0x1) to maintain more detail for navigation
+        # while still protecting privacy
+        convert "$image" \
+            -auto-orient \
+            -blur 0x1 \
+            -quality 90 \
+            -strip \
+            "$privacy_path"
+    fi
+done
+
+echo "✅ Privacy protection complete!"
+echo "📁 Privacy-protected images saved in: $PRIVACY_DIR"
 
 # Calculate total space savings
 original_total=$(du -sb "$SOURCE_DIR"/*.JPG | awk '{sum += $1} END {print sum}')
