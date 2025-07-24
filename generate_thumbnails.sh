@@ -30,10 +30,12 @@ for image in "$SOURCE_DIR"/*.JPG; do
         echo "[$count/$total] Processing: $filename"
         
         # Generate thumbnail with ImageMagick
-        # Using -resize to maintain aspect ratio and crop to exact dimensions
+        # Using -auto-orient to fix EXIF rotation issues FIRST
+        # -resize to maintain aspect ratio and crop to exact dimensions
         # -quality 85 for good compression while maintaining quality
         # -strip to remove metadata and reduce file size
         convert "$image" \
+            -auto-orient \
             -resize "${THUMB_WIDTH}x${THUMB_HEIGHT}^" \
             -gravity center \
             -crop "${THUMB_WIDTH}x${THUMB_HEIGHT}+0+0" \
