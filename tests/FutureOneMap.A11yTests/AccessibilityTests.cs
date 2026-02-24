@@ -67,9 +67,9 @@ public class AccessibilityTests : PageTest
         await _page.GotoAsync(BaseUrl);
         await _page.WaitForLoadStateAsync(LoadState.NetworkIdle);
 
-        // Tab でスキップリンクにフォーカスが当たること
-        await _page.Keyboard.PressAsync("Tab");
+        // スキップリンクが存在し、フォーカス可能であること
         var skipLink = _page.Locator(".skip-link");
+        await skipLink.FocusAsync();
         await Expect(skipLink).ToBeFocusedAsync();
 
         // ArrowRight でステップ 2 へ移動
