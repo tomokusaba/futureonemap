@@ -11,6 +11,63 @@
             box-sizing: border-box;
         }
 
+        /* スキップリンク */
+        .skip-link {
+            position: absolute;
+            top: -100%;
+            left: 0;
+            background: #2c3e50;
+            color: #ffffff;
+            padding: 12px 24px;
+            z-index: 200;
+            font-size: 1em;
+            text-decoration: none;
+            border-radius: 0 0 8px 0;
+        }
+
+        .skip-link:focus {
+            top: 0;
+        }
+
+        /* フォーカスインジケーター (WCAG 2.4.7, 2.4.11, 2.4.12) */
+        :focus-visible {
+            outline: 3px solid #1a5276;
+            outline-offset: 2px;
+        }
+
+        .btn:focus-visible,
+        .floating-btn:focus-visible {
+            outline: 3px solid #1a5276;
+            outline-offset: 3px;
+            box-shadow: 0 0 0 6px rgba(26, 82, 118, 0.3);
+        }
+
+        /* スクリーンリーダー専用テキスト */
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        /* ライブリージョン */
+        .live-region {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -40,7 +97,7 @@
         }
 
         .subtitle {
-            color: #7f8c8d;
+            color: #595959;
             font-size: 1.2em;
             margin-bottom: 30px;
         }
@@ -159,7 +216,7 @@
         }
 
         .step-description {
-            color: #5d6d7e;
+            color: #4a4a4a;
             line-height: 1.6;
             font-size: 1.1em;
         }
@@ -227,7 +284,7 @@
         }
 
         .floating-btn:disabled {
-            opacity: 0.3;
+            opacity: 0.5;
             cursor: not-allowed;
             transform: none;
         }
@@ -332,6 +389,40 @@
             font-size: 35px;
             font-weight: bold;
             cursor: pointer;
+            background: rgba(0, 0, 0, 0.5);
+            border: 2px solid white;
+            border-radius: 50%;
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            line-height: 1;
+        }
+
+        .close-modal:focus-visible {
+            outline: 3px solid #ffffff;
+            outline-offset: 3px;
+        }
+
+        /* prefers-reduced-motion対応 (WCAG 2.3.3) */
+        @media (prefers-reduced-motion: reduce) {
+            .step-container,
+            .step-image,
+            .btn,
+            .floating-btn,
+            .progress-fill {
+                transition: none;
+            }
+
+            .step-container:hover {
+                transform: none;
+            }
+
+            .loading-spinner {
+                animation: none;
+            }
         }
 
         @media (max-width: 768px) {
@@ -380,47 +471,55 @@
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
+    <a href="#navigationContainer" class="skip-link">メインコンテンツへスキップ</a>
+
+    <!-- ライブリージョン: ステップ変更通知 -->
+    <div id="liveRegion" class="live-region" aria-live="polite" aria-atomic="true"></div>
+
+    <div class="container" role="document">
+        <header class="header">
             <h1>🗺️ FutureOneへの道のり</h1>
             <p class="subtitle">画像で案内する道順ナビゲーションシステム</p>
-        </div>
+        </header>
 
-        <div class="progress-bar">
+        <div class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" aria-label="ナビゲーション進捗">
             <div class="progress-fill" id="progressFill"></div>
         </div>
 
         <!-- Sticky controls at the top -->
-        <div class="sticky-controls">
+        <nav class="sticky-controls" aria-label="ステップ操作">
             <div class="controls">
-                <button class="btn btn-secondary" id="prevBtn" onclick="previousStep()">⬅️ 前のステップ</button>
-                <button class="btn btn-primary" id="nextBtn" onclick="nextStep()">次のステップ ➡️</button>
+                <button class="btn btn-secondary" id="prevBtn" onclick="previousStep()" aria-label="前のステップへ戻る">⬅️ 前のステップ</button>
+                <button class="btn btn-primary" id="nextBtn" onclick="nextStep()" aria-label="次のステップへ進む">次のステップ ➡️</button>
             </div>
-        </div>
+        </nav>
 
-        <div class="navigation-container" id="navigationContainer">
+        <main id="navigationContainer" class="navigation-container" aria-label="道順ステップ一覧">
             <!-- Steps will be dynamically generated here -->
-        </div>
+        </main>
 
         <!-- Floating controls -->
-        <div class="floating-controls">
-            <button class="floating-btn floating-btn-up" id="floatingPrevBtn" onclick="previousStep()" title="前のステップ">⬅️</button>
-            <button class="floating-btn floating-btn-down" id="floatingNextBtn" onclick="nextStep()" title="次のステップ">➡️</button>
-        </div>
+        <nav class="floating-controls" aria-label="フローティングナビゲーション">
+            <button class="floating-btn floating-btn-up" id="floatingPrevBtn" onclick="previousStep()" aria-label="前のステップへ戻る" title="前のステップ">⬅️</button>
+            <button class="floating-btn floating-btn-down" id="floatingNextBtn" onclick="nextStep()" aria-label="次のステップへ進む" title="次のステップ">➡️</button>
+        </nav>
 
-        <div class="info-panel">
-            <h3>🔍 使い方</h3>
-            <p>・各ステップの画像をクリックすると拡大表示されます</p>
-            <p>・「次のステップ」「前のステップ」ボタンで進行状況を管理できます</p>
-            <p>・現在のステップは青い枠で強調表示されます</p>
-        </div>
+        <section class="info-panel" aria-labelledby="usageHeading">
+            <h2 id="usageHeading">🔍 使い方</h2>
+            <ul>
+                <li>各ステップの画像をクリックまたはEnterキーで拡大表示されます</li>
+                <li>「次のステップ」「前のステップ」ボタンで進行状況を管理できます</li>
+                <li>現在のステップは青い枠で強調表示されます</li>
+                <li>キーボードの左右矢印キーでもステップ移動できます</li>
+            </ul>
+        </section>
     </div>
 
     <!-- Modal for image zoom -->
-    <div id="imageModal" class="modal" onclick="closeModal()">
-        <span class="close-modal" onclick="closeModal()">&times;</span>
+    <div id="imageModal" class="modal" role="dialog" aria-modal="true" aria-label="画像の拡大表示" onclick="handleModalBackdropClick(event)">
+        <button class="close-modal" id="closeModalBtn" onclick="closeModal()" aria-label="拡大画像を閉じる">&times;</button>
         <div class="modal-content">
-            <img id="modalImage" class="modal-image" src="" alt="拡大画像">
+            <img id="modalImage" class="modal-image" src="" alt="">
         </div>
     </div>
 
@@ -497,6 +596,15 @@
             img.alt = alt;
             img.style.display = 'none';
             img.onclick = onClick;
+            img.setAttribute('tabindex', '0');
+            img.setAttribute('role', 'button');
+            img.setAttribute('aria-label', alt + 'の画像を拡大表示');
+            img.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onClick();
+                }
+            });
 
             // Add image info overlay
             const imageInfo = document.createElement('div');
@@ -589,8 +697,12 @@
                 stepElement.id = `step-${index}`;
                 
                 // Create step content
+                stepElement.setAttribute('role', 'article');
+                stepElement.setAttribute('aria-label', `ステップ ${index + 1}: ${step.title}`);
+
                 const stepNumber = document.createElement('div');
                 stepNumber.className = 'step-number';
+                stepNumber.setAttribute('aria-hidden', 'true');
                 stepNumber.textContent = index + 1;
 
                 // Create image with lazy loading - using thumbnail for display, full image for modal
@@ -604,7 +716,7 @@
                 const stepContent = document.createElement('div');
                 stepContent.className = 'step-content';
                 stepContent.innerHTML = `
-                    <h3 class="step-title">${step.title}</h3>
+                    <h2 class="step-title">${step.title}</h2>
                     <p class="step-description">${step.description}</p>
                 `;
 
@@ -636,7 +748,15 @@
 
             // Update progress bar
             const progress = ((currentStep + 1) / routeSteps.length) * 100;
+            const progressBar = document.getElementById('progressFill').parentElement;
             document.getElementById('progressFill').style.width = `${progress}%`;
+            progressBar.setAttribute('aria-valuenow', Math.round(progress));
+
+            // ライブリージョンでステップ変更を通知
+            const liveRegion = document.getElementById('liveRegion');
+            if (liveRegion) {
+                liveRegion.textContent = `ステップ ${currentStep + 1}/${routeSteps.length}: ${routeSteps[currentStep].title}`;
+            }
 
             // Update both sets of button states
             const prevButtons = ['prevBtn', 'floatingPrevBtn'];
@@ -676,26 +796,78 @@
             }
         }
 
+        let lastFocusedElement = null;
+
         function openModal(imageSrc) {
             const modal = document.getElementById('imageModal');
             const modalImage = document.getElementById('modalImage');
             
+            // フォーカス復帰のために現在のフォーカス要素を保存
+            lastFocusedElement = document.activeElement;
+
+            // モーダル画像のaltテキストを設定
+            const currentStepData = routeSteps[currentStep];
+            modalImage.alt = currentStepData ? `${currentStepData.title}の拡大画像` : '拡大画像';
+
             // Always use full-size image for modal, load if not cached
             loadImageWithCache(imageSrc).then(cachedSrc => {
                 modalImage.src = cachedSrc;
                 modal.style.display = 'block';
+                // モーダルが開いたら閉じるボタンにフォーカス
+                document.getElementById('closeModalBtn').focus();
+                // 背景のスクロールを無効化
+                document.body.style.overflow = 'hidden';
             }).catch(error => {
                 console.error('Failed to load full-size image for modal:', imageSrc, error);
-                // Fallback: try to use the original src
                 modalImage.src = imageSrc;
                 modal.style.display = 'block';
+                document.getElementById('closeModalBtn').focus();
+                document.body.style.overflow = 'hidden';
             });
         }
 
         function closeModal() {
             const modal = document.getElementById('imageModal');
             modal.style.display = 'none';
+            document.body.style.overflow = '';
+            // フォーカスを元の要素に戻す
+            if (lastFocusedElement) {
+                lastFocusedElement.focus();
+                lastFocusedElement = null;
+            }
         }
+
+        function handleModalBackdropClick(event) {
+            if (event.target === event.currentTarget) {
+                closeModal();
+            }
+        }
+
+        // モーダル内のフォーカストラップ (WCAG 2.4.3)
+        document.addEventListener('keydown', function(event) {
+            const modal = document.getElementById('imageModal');
+            if (modal.style.display !== 'block') return;
+
+            if (event.key === 'Tab') {
+                const closeBtn = document.getElementById('closeModalBtn');
+                const modalImage = document.getElementById('modalImage');
+                const focusableElements = [closeBtn, modalImage];
+                const firstElement = focusableElements[0];
+                const lastElement = focusableElements[focusableElements.length - 1];
+
+                if (event.shiftKey) {
+                    if (document.activeElement === firstElement) {
+                        event.preventDefault();
+                        lastElement.focus();
+                    }
+                } else {
+                    if (document.activeElement === lastElement) {
+                        event.preventDefault();
+                        firstElement.focus();
+                    }
+                }
+            }
+        });
 
         // Cleanup function for memory management
         function cleanupImageCache() {
@@ -713,9 +885,18 @@
             }
         }
 
-        // Keyboard navigation
+        // Keyboard navigation (モーダルが閉じている時のみ)
         document.addEventListener('keydown', function(event) {
-            if (event.key === 'ArrowRight' || event.key === ' ') {
+            const modal = document.getElementById('imageModal');
+            if (modal.style.display === 'block') {
+                // モーダル内ではEscapeのみ処理
+                if (event.key === 'Escape') {
+                    closeModal();
+                }
+                return;
+            }
+
+            if (event.key === 'ArrowRight') {
                 event.preventDefault();
                 nextStep();
             } else if (event.key === 'ArrowLeft') {
