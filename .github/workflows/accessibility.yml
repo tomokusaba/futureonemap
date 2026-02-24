@@ -1,0 +1,46 @@
+name: Accessibility CI (axe DevTools)
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  accessibility-test:
+    runs-on: ubuntu-latest
+    name: axe アクセシビリティ検査
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+
+      - name: Restore dependencies
+        run: dotnet restore tests/FutureOneMap.A11yTests
+
+      - name: Build test project
+        run: dotnet build tests/FutureOneMap.A11yTests --no-restore
+
+      - name: Install Playwright Browsers
+        run: pwsh tests/FutureOneMap.A11yTests/bin/Debug/net9.0/playwright.ps1 install --with-deps chromium
+
+      - name: Start local server
+        run: |
+          npx http-server . -p 8080 -s &
+          sleep 2
+
+      - name: Run accessibility tests
+        run: dotnet test tests/FutureOneMap.A11yTests --no-build --logger "trx;LogFileName=test-results.trx" --settings tests/FutureOneMap.A11yTests/.runsettings
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: accessibility-test-results
+          path: tests/FutureOneMap.A11yTests/TestResults/
+          retention-days: 30
